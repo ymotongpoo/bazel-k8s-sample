@@ -1,0 +1,14 @@
+load("@rules_go//go:def.bzl", "go_library", "go_test")
+
+go_library(
+    name = "shortener",
+    srcs = ["shortener.go"],
+    importpath = "github.com/ymotongpoo/bazel-k8s-sample/services/api/shortener",
+    visibility = ["//services/api:__subpackages__"],
+)
+
+go_test(
+    name = "shortener_test",
+    srcs = ["shortener_test.go"],
+    embed = [":shortener"],
+)

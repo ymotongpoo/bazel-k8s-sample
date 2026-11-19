@@ -1,7 +1,7 @@
 # bazel-k8s-sample
 
 短縮URLサービスを題材に、[Kubernetes](https://kubernetes.io/ja/)で動かすのに必要なものをすべて[Bazel](https://bazel.build/)でビルドするリポジトリです。
-現在は構築中で、Bazelのファイルはまだありません。
+現在は構築中です。
 
 ## 構成
 
