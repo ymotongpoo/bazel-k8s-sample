@@ -1,0 +1,54 @@
+# 既定ですべてを無視し、管理するファイルとディレクトリだけを明示的に戻す。
+# 新しいディレクトリやトップレベルのファイルを追加するときは、ここに許可の行を足す。
+# bazel-bin、bazel-out などの出力シンボリックリンクはトップレベルにできるので、この行で無視される。
+/*
+
+!/.gitignore
+!/README.md
+!/LICENSE
+
+# Bazel のワークスペース設定
+!/.bazelversion
+!/.bazelrc
+!/.bazelignore
+!/MODULE.bazel
+!/MODULE.bazel.lock
+!/BUILD.bazel
+!/REPO.bazel
+
+# 言語ごとの依存の宣言とロックファイル
+!/go.mod
+!/go.sum
+!/package.json
+!/pnpm-lock.yaml
+!/pnpm-workspace.yaml
+!/.npmrc
+
+# アプリケーション、スキーマ、デプロイ、ツール、CI
+!/services/
+!/web/
+!/proto/
+!/deploy/
+!/tools/
+!/platforms/
+!/docs/
+!/.github/
+
+# 許可したディレクトリの中でも、次のものは管理しない。
+# 認証情報や秘密を含みうるファイル。リモートキャッシュの認証ヘッダーは user.bazelrc に書くことが多い
+user.bazelrc
+*.bazelrc.user
+.env
+.env.*
+*.pem
+*.key
+*.p12
+credentials*.json
+kubeconfig*
+# 依存とビルドの成果物
+node_modules/
+dist/
+# OS とエディタ
+.DS_Store
+.vscode/
+.idea/
