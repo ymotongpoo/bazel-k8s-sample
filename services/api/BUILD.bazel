@@ -1,3 +1,4 @@
+load("@bazel_lib//lib:copy_to_directory.bzl", "copy_to_directory")
 load("@rules_go//go:def.bzl", "go_binary", "go_library")
 load("@rules_shell//shell:sh_test.bzl", "sh_test")
 
@@ -14,9 +15,17 @@ sh_test(
     data = [":api"],
 )
 
+# //go:embed は同じパッケージの下のファイルしか埋め込めないので、//web:dist をここにコピーする。
+copy_to_directory(
+    name = "ui",
+    srcs = ["//web:dist"],
+    root_paths = ["web/dist"],
+)
+
 go_library(
     name = "api_lib",
     srcs = ["main.go"],
+    embedsrcs = [":ui"],  # keep
     importpath = "github.com/ymotongpoo/bazel-k8s-sample/services/api",
     visibility = ["//visibility:private"],
     deps = [

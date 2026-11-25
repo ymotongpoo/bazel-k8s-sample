@@ -24,3 +24,9 @@ if [[ "${location}" != "https://bazel.build/" ]]; then
   echo "unexpected redirect: ${location}" >&2
   exit 1
 fi
+
+# 埋め込んだフロントエンドを配信していることを確かめる。
+if ! curl -s "http://127.0.0.1:${port}/" | grep -q '/ui/app.js'; then
+  echo "index.html is not served" >&2
+  exit 1
+fi

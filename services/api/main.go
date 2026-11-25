@@ -2,8 +2,10 @@
 package main
 
 import (
+	"embed"
 	"flag"
 	"io"
+	"io/fs"
 	"log"
 	"net/http"
 
@@ -13,6 +15,11 @@ import (
 	shortenerv1 "github.com/ymotongpoo/bazel-k8s-sample/proto/shortener/v1"
 	"github.com/ymotongpoo/bazel-k8s-sample/services/api/shortener"
 )
+
+// ui は //web:dist のフロントエンド。Bazel が services/api/ui にコピーしたものを埋め込む。
+//
+//go:embed ui
+var ui embed.FS
 
 func main() {
 	addr := flag.String("addr", ":8080", "listen address")
@@ -50,6 +57,14 @@ func main() {
 		}
 		w.Header().Set("Content-Type", "application/json")
 		w.Write(resp)
+	})
+	static, err := fs.Sub(ui, "ui")
+	if err != nil {
+		log.Fatal(err)
+	}
+	mux.Handle("GET /ui/", http.StripPrefix("/ui/", http.FileServerFS(static)))
+	mux.HandleFunc("GET /{$}", func(w http.ResponseWriter, r *http.Request) {
+		http.ServeFileFS(w, r, static, "index.html")
 	})
 	mux.HandleFunc("GET /{code}", func(w http.ResponseWriter, r *http.Request) {
 		url, err := store.Resolve(r.PathValue("code"))
