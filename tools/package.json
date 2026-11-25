@@ -1,0 +1,6 @@
+{
+  "private": true,
+  "devDependencies": {
+    "@bufbuild/protoc-gen-es": "2.17.0"
+  }
+}

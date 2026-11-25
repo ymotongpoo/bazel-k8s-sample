@@ -1,3 +1,4 @@
+load("@aspect_rules_js//js:defs.bzl", "js_library", "js_test")
 load("@protobuf//bazel:proto_library.bzl", "proto_library")
 load("@rules_go//go:def.bzl", "go_library")
 load("@rules_go//proto:def.bzl", "go_proto_library")
@@ -20,4 +21,19 @@ go_library(
     embed = [":shortenerv1_go_proto"],
     importpath = "github.com/ymotongpoo/bazel-k8s-sample/proto/shortener/v1",
     visibility = ["//visibility:public"],
+)
+
+js_library(
+    name = "shortenerv1_js",
+    visibility = ["//visibility:public"],
+    deps = [":shortenerv1_proto"],
+)
+
+js_test(
+    name = "json_test",
+    data = [
+        ":shortenerv1_js",
+        "//:node_modules/@bufbuild/protobuf",
+    ],
+    entry_point = "json_test.mjs",
 )
