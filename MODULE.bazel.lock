@@ -350,6 +350,11 @@
     "@@gazelle+//:extensions.bzl%go_deps": {
       "required_mod_files_v1": [
         {
+          "importpath": "golang.org/x/time",
+          "sha256": "da66f925904a97b705fe18dde79496d718dca9af2a755bd31da151a9b1a0eaaa",
+          "version": "v0.16.0"
+        },
+        {
           "importpath": "github.com/aymanbagabas/go-udiff",
           "sha256": "c03ad1d34f81476b00ebc5b3b31ab7535b64631e3b24331ad33945182e77492d",
           "version": "v0.4.1"

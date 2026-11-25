@@ -19,5 +19,8 @@ go_library(
     srcs = ["main.go"],
     importpath = "github.com/ymotongpoo/bazel-k8s-sample/services/api",
     visibility = ["//visibility:private"],
-    deps = ["//services/api/shortener"],
+    deps = [
+        "//services/api/shortener",
+        "@org_golang_x_time//rate",
+    ],
 )

@@ -7,16 +7,26 @@ import (
 	"log"
 	"net/http"
 
+	"golang.org/x/time/rate"
+
 	"github.com/ymotongpoo/bazel-k8s-sample/services/api/shortener"
 )
 
 func main() {
 	addr := flag.String("addr", ":8080", "listen address")
+	limit := flag.Float64("rate", 10, "shorten requests allowed per second")
+	burst := flag.Int("burst", 20, "maximum burst of shorten requests")
 	flag.Parse()
 
 	store := shortener.NewStore()
+	// 発行の要求だけを、サーバー全体でまとめて制限する。
+	limiter := rate.NewLimiter(rate.Limit(*limit), *burst)
 	mux := http.NewServeMux()
 	mux.HandleFunc("POST /shorten", func(w http.ResponseWriter, r *http.Request) {
+		if !limiter.Allow() {
+			http.Error(w, "too many requests", http.StatusTooManyRequests)
+			return
+		}
 		url := r.FormValue("url")
 		if url == "" {
 			http.Error(w, "url is required", http.StatusBadRequest)
