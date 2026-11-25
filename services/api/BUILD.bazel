@@ -10,6 +10,7 @@ go_binary(
 
 sh_test(
     name = "smoke_test",
+    size = "small",
     srcs = ["smoke_test.sh"],
     args = ["$(rootpath :api)"],
     data = [":api"],

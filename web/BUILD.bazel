@@ -19,6 +19,7 @@ ts_project(
 
 js_test(
     name = "shorten_test",
+    size = "small",
     data = [":web_ts"],
     entry_point = "src/shorten_test.js",
 )
