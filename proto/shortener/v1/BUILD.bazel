@@ -1,0 +1,23 @@
+load("@protobuf//bazel:proto_library.bzl", "proto_library")
+load("@rules_go//go:def.bzl", "go_library")
+load("@rules_go//proto:def.bzl", "go_proto_library")
+
+proto_library(
+    name = "shortenerv1_proto",
+    srcs = ["shortener.proto"],
+    visibility = ["//visibility:public"],
+)
+
+go_proto_library(
+    name = "shortenerv1_go_proto",
+    importpath = "github.com/ymotongpoo/bazel-k8s-sample/proto/shortener/v1",
+    proto = ":shortenerv1_proto",
+    visibility = ["//visibility:public"],
+)
+
+go_library(
+    name = "shortener",
+    embed = [":shortenerv1_go_proto"],
+    importpath = "github.com/ymotongpoo/bazel-k8s-sample/proto/shortener/v1",
+    visibility = ["//visibility:public"],
+)

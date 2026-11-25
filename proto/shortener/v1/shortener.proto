@@ -1,0 +1,16 @@
+syntax = "proto3";
+
+// shortener.v1 は短縮 URL の API の要求と応答を定義する。
+package shortener.v1;
+
+option go_package = "github.com/ymotongpoo/bazel-k8s-sample/proto/shortener/v1;shortenerv1";
+
+// ShortenRequest は短縮する URL を指定する。
+message ShortenRequest {
+  string url = 1;
+}
+
+// ShortenResponse は発行した短縮コードを返す。
+message ShortenResponse {
+  string code = 1;
+}
