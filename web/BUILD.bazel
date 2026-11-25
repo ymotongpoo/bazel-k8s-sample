@@ -1,0 +1,45 @@
+load("@aspect_rules_esbuild//esbuild:defs.bzl", "esbuild")
+load("@aspect_rules_js//js:defs.bzl", "js_test")
+load("@aspect_rules_ts//ts:defs.bzl", "ts_project")
+load("@bazel_lib//lib:copy_to_directory.bzl", "copy_to_directory")
+
+ts_project(
+    name = "web_ts",
+    srcs = glob(["src/*.ts"]),
+    declaration = True,
+    source_map = True,
+    transpiler = "tsc",
+    tsconfig = "tsconfig.json",
+    deps = [
+        "//:node_modules/@bufbuild/protobuf",
+        "//:node_modules/@types/node",
+        "//proto/shortener/v1:shortenerv1_js",
+    ],
+)
+
+js_test(
+    name = "shorten_test",
+    data = [":web_ts"],
+    entry_point = "src/shorten_test.js",
+)
+
+esbuild(
+    name = "bundle",
+    srcs = [":web_ts"],
+    entry_point = "src/main.js",
+    format = "esm",
+    minify = True,
+    output = "app.js",
+    target = "es2022",
+)
+
+# Go のサーバーが埋め込んで配信するファイル。
+copy_to_directory(
+    name = "dist",
+    srcs = [
+        "index.html",
+        ":bundle",
+    ],
+    exclude_srcs_patterns = ["**/*.map"],
+    visibility = ["//services/api:__pkg__"],
+)

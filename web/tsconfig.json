@@ -1,0 +1,14 @@
+{
+  "compilerOptions": {
+    "target": "es2022",
+    "module": "es2022",
+    "moduleResolution": "bundler",
+    "lib": ["es2022", "dom"],
+    "types": ["node"],
+    "strict": true,
+    "declaration": true,
+    "sourceMap": true,
+    // エディタが bazel-bin の下に生成した型定義を見つけられるように、ソースツリーと出力ツリーを重ねる。
+    "rootDirs": ["..", "../bazel-bin"]
+  }
+}
