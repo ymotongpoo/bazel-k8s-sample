@@ -1,7 +1,7 @@
 load("@gazelle//:def.bzl", "DEFAULT_LANGUAGES", "gazelle", "gazelle_binary")
 load("@rules_go//go:def.bzl", "TOOLS_NOGO", "nogo")
 
-# gazelle ルールの既定のバイナリは v1 の入口なので、v2 の入口のバイナリを作って渡す。
+# gazelle ルールの既定のバイナリは v1 のエントリーポイントなので、v2 のバイナリを作って渡す。
 gazelle_binary(
     name = "gazelle_bin",
     languages = DEFAULT_LANGUAGES,
