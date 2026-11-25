@@ -1,0 +1,12 @@
+load("@gazelle//:def.bzl", "DEFAULT_LANGUAGES", "gazelle", "gazelle_binary")
+
+# gazelle ルールの既定のバイナリは v1 の入口なので、v2 の入口のバイナリを作って渡す。
+gazelle_binary(
+    name = "gazelle_bin",
+    languages = DEFAULT_LANGUAGES,
+)
+
+gazelle(
+    name = "gazelle",
+    gazelle = ":gazelle_bin",
+)

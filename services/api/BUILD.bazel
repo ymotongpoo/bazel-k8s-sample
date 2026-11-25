@@ -1,10 +1,10 @@
-load("@rules_go//go:def.bzl", "go_binary")
+load("@rules_go//go:def.bzl", "go_binary", "go_library")
 load("@rules_shell//shell:sh_test.bzl", "sh_test")
 
 go_binary(
     name = "api",
-    srcs = ["main.go"],
-    deps = ["//services/api/shortener"],
+    embed = [":api_lib"],
+    visibility = ["//visibility:public"],
 )
 
 sh_test(
@@ -12,4 +12,12 @@ sh_test(
     srcs = ["smoke_test.sh"],
     args = ["$(rootpath :api)"],
     data = [":api"],
+)
+
+go_library(
+    name = "api_lib",
+    srcs = ["main.go"],
+    importpath = "github.com/ymotongpoo/bazel-k8s-sample/services/api",
+    visibility = ["//visibility:private"],
+    deps = ["//services/api/shortener"],
 )
