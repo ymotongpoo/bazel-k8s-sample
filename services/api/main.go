@@ -7,6 +7,7 @@ import (
 	"io"
 	"io/fs"
 	"log"
+	"net"
 	"net/http"
 
 	"golang.org/x/time/rate"
@@ -75,6 +76,11 @@ func main() {
 		http.Redirect(w, r, url, http.StatusFound)
 	})
 
-	log.Printf("listening on %s", *addr)
-	log.Fatal(http.ListenAndServe(*addr, mux))
+	// ポートに 0 を指定すると OS が空いているポートを選ぶので、実際に待ち受けたアドレスを出力する。
+	ln, err := net.Listen("tcp", *addr)
+	if err != nil {
+		log.Fatal(err)
+	}
+	log.Printf("listening on %s", ln.Addr())
+	log.Fatal(http.Serve(ln, mux))
 }
