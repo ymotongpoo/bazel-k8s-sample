@@ -16,7 +16,9 @@ for _ in $(seq 1 50); do
   sleep 0.1
 done
 
-code=$(curl -s -X POST -d url=https://bazel.build/ "http://127.0.0.1:${port}/shorten")
+# protojson の出力は空白の入り方が一定でないので、空白を許して code を取り出す。
+code=$(curl -s -X POST -H 'Content-Type: application/json' -d '{"url":"https://bazel.build/"}' \
+  "http://127.0.0.1:${port}/shorten" | sed -E 's/.*"code": *"([^"]*)".*/\1/')
 location=$(curl -s -o /dev/null -w '%{redirect_url}' "http://127.0.0.1:${port}/${code}")
 if [[ "${location}" != "https://bazel.build/" ]]; then
   echo "unexpected redirect: ${location}" >&2

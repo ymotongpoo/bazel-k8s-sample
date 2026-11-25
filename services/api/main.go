@@ -3,12 +3,14 @@ package main
 
 import (
 	"flag"
-	"fmt"
+	"io"
 	"log"
 	"net/http"
 
 	"golang.org/x/time/rate"
+	"google.golang.org/protobuf/encoding/protojson"
 
+	shortenerv1 "github.com/ymotongpoo/bazel-k8s-sample/proto/shortener/v1"
 	"github.com/ymotongpoo/bazel-k8s-sample/services/api/shortener"
 )
 
@@ -27,12 +29,27 @@ func main() {
 			http.Error(w, "too many requests", http.StatusTooManyRequests)
 			return
 		}
-		url := r.FormValue("url")
-		if url == "" {
+		body, err := io.ReadAll(http.MaxBytesReader(w, r.Body, 4096))
+		if err != nil {
+			http.Error(w, "cannot read request", http.StatusBadRequest)
+			return
+		}
+		var req shortenerv1.ShortenRequest
+		if err := protojson.Unmarshal(body, &req); err != nil {
+			http.Error(w, "invalid request", http.StatusBadRequest)
+			return
+		}
+		if req.GetUrl() == "" {
 			http.Error(w, "url is required", http.StatusBadRequest)
 			return
 		}
-		fmt.Fprintln(w, store.Shorten(url))
+		resp, err := protojson.Marshal(&shortenerv1.ShortenResponse{Code: store.Shorten(req.GetUrl())})
+		if err != nil {
+			http.Error(w, "cannot encode response", http.StatusInternalServerError)
+			return
+		}
+		w.Header().Set("Content-Type", "application/json")
+		w.Write(resp)
 	})
 	mux.HandleFunc("GET /{code}", func(w http.ResponseWriter, r *http.Request) {
 		url, err := store.Resolve(r.PathValue("code"))
