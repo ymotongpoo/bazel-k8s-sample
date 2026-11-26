@@ -1,0 +1,14 @@
+apiVersion: kustomize.config.k8s.io/v1beta1
+kind: Kustomization
+# 手元の kind のクラスタでは、dev と同じクラスタの別の Namespace に置く。
+namespace: shortener-prod
+resources:
+  - ../../base
+# イメージのリポジトリと digest は、Bazel がイメージのビルドの出力から生成する Component が決める。
+components:
+  - ../../images
+replicas:
+  - name: api
+    count: 2
+  - name: worker
+    count: 1
