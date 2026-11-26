@@ -35,20 +35,44 @@ jobs:
     runs-on: ubuntu-24.04
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          # 比べる前のコミットを取り出せるように、履歴をすべて取得する。
+          fetch-depth: 0
       - uses: bazel-contrib/setup-bazel@f34d6a05eae3c24acab7fa54587492daeaeffdab # 0.19.2
         with:
           bazelisk-cache: true
           repository-cache: true
           disk-cache: ${{ github.job }}
           cache-save: ${{ github.event_name == 'push' }}
-      - name: すべてのターゲットのビルドとテスト
-        run: bazel test --config=ci --config=observe //...
+      - name: 影響を受けるターゲットを求める
+        env:
+          # pull request なら変更先のブランチ、push なら push の前のコミットと比べる。
+          BASE: ${{ github.event_name == 'pull_request' && github.event.pull_request.base.sha || github.event.before }}
+        run: |
+          if [[ -z "${BASE}" || "${BASE}" =~ ^0+$ ]]; then
+            echo '//...' > affected.txt
+          else
+            bazel run --config=ci @multitool//tools/target-determinator:workspace_root -- \
+              -bazel-opts=--config=ci -targets='//...' "${BASE}" > affected.txt
+          fi
+          echo "影響を受けるターゲット: $(wc -l < affected.txt)"
+          cat affected.txt
+      - name: 影響を受けるターゲットのビルドとテスト
+        run: |
+          if [[ ! -s affected.txt ]]; then
+            echo "影響を受けるターゲットはない"
+            exit 0
+          fi
+          # テストのターゲットが1つもないときの終了コード 4 は、失敗として扱わない。
+          bazel test --config=ci --config=observe --target_pattern_file=affected.txt || [[ $? -eq 4 ]]
       - name: ビルドの記録を保存する
         if: always()
         uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
         with:
           name: bazel-logs
           path: |
+            affected.txt
             bazel-bep.json
             bazel-profile.json.gz
+          if-no-files-found: ignore
           retention-days: 7
