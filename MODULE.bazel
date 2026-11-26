@@ -8,6 +8,7 @@ bazel_dep(name = "bazel_skylib", version = "1.9.2")
 bazel_dep(name = "container_structure_test", version = "1.22.1")
 bazel_dep(name = "rules_go", version = "0.65.0")
 bazel_dep(name = "rules_nodejs", version = "6.7.7")
+bazel_dep(name = "rules_multitool", version = "1.11.1")
 bazel_dep(name = "rules_oci", version = "2.3.5")
 bazel_dep(name = "gazelle", version = "2.0.0-beta.2")
 bazel_dep(name = "hermetic_cc_toolchain", version = "4.3.0")
@@ -59,6 +60,36 @@ oci.pull(
     ],
 )
 use_repo(oci, "distroless_static", "distroless_static_linux_amd64", "distroless_static_linux_arm64_v8")
+
+# マニフェストをレンダリングして検証するツール。バージョンとハッシュは tools/multitool.lock.json に書く。
+multitool = use_extension("@rules_multitool//multitool:extension.bzl", "multitool")
+multitool.hub(lockfile = "//tools:multitool.lock.json")
+use_repo(multitool, "multitool")
+
+# kubeconform がマニフェストを検証するための Kubernetes 1.37.0 の JSON スキーマ。
+# テストの中でネットワークからスキーマを取得させないように、ビルドの入力にする。
+http_file = use_repo_rule("@bazel_tools//tools/build_defs/repo:http.bzl", "http_file")
+
+http_file(
+    name = "k8s_schema_deployment_apps_v1",
+    downloaded_file_path = "deployment-apps-v1.json",
+    sha256 = "0b64451c0b8c36ea06dfebf952718810ae24a07779fb0ed2a6b03f1cc8735a54",
+    url = "https://raw.githubusercontent.com/yannh/kubernetes-json-schema/e62c03bd5a52fd34ff6ac28d083e2a300e0ae7c1/v1.37.0-standalone-strict/deployment-apps-v1.json",
+)
+
+http_file(
+    name = "k8s_schema_namespace_v1",
+    downloaded_file_path = "namespace-v1.json",
+    sha256 = "324fae677b98d1a6d54340db0c334d053e8ffbafceb3f73326e41de2610d5843",
+    url = "https://raw.githubusercontent.com/yannh/kubernetes-json-schema/e62c03bd5a52fd34ff6ac28d083e2a300e0ae7c1/v1.37.0-standalone-strict/namespace-v1.json",
+)
+
+http_file(
+    name = "k8s_schema_service_v1",
+    downloaded_file_path = "service-v1.json",
+    sha256 = "8bf019854daed511e7c174896a898173fa65d88ec5937c687a37303d4cc9351b",
+    url = "https://raw.githubusercontent.com/yannh/kubernetes-json-schema/e62c03bd5a52fd34ff6ac28d083e2a300e0ae7c1/v1.37.0-standalone-strict/service-v1.json",
+)
 
 # ビルドに使うツールの一部（tar.bzl が使う gawk）は C のソースからビルドされる。
 # ホストのコンパイラではなく、Zig の配布物に含まれる clang でビルドする。
