@@ -24,6 +24,10 @@ func main() {
 		io.WriteString(w, "ok\n")
 	})
 	mux.HandleFunc("POST /clicks", func(w http.ResponseWriter, r *http.Request) {
+		if ct := r.Header.Get("Content-Type"); ct != "application/json" {
+			http.Error(w, "content type must be application/json", http.StatusUnsupportedMediaType)
+			return
+		}
 		body, err := io.ReadAll(http.MaxBytesReader(w, r.Body, 1024))
 		if err != nil {
 			http.Error(w, "cannot read request", http.StatusBadRequest)
