@@ -14,8 +14,19 @@ build --workspace_status_command=tools/workspace_status.sh
 # レジストリへの push は、コミットをタグに埋め込んで行う。bazel run --config=push で使う。
 run:push --stamp
 
-# 手元の kind の bazel-remote をリモートキャッシュに使う。bazel build --config=cache で使う。
-common:cache --remote_cache=grpc://localhost:9092
+# 手元の kind の bazel-remote をリモートキャッシュに使う。サーバーの証明書は tools/dev/certs/ca.pem で確かめる。
+# 書き込めるのはクライアントの証明書を持つビルドだけなので、cache-write か cache-read のどちらかを使う。
+common:cache --remote_cache=grpcs://localhost:9092
+common:cache --tls_certificate=tools/dev/certs/ca.pem
+
+# クライアントの証明書を持ち、キャッシュに書き込むビルド。bazel build --config=cache-write で使う。
+common:cache-write --config=cache
+common:cache-write --tls_client_certificate=tools/dev/certs/client.pem
+common:cache-write --tls_client_key=tools/dev/certs/client.key
+
+# 証明書を持たず、キャッシュを読むだけのビルド。bazel build --config=cache-read で使う。
+common:cache-read --config=cache
+common:cache-read --noremote_upload_local_results
 
 # 手元の kind の Buildbarn でリモート実行する。bazel build --config=remote で使う。
 common:remote --remote_executor=grpc://localhost:8980
