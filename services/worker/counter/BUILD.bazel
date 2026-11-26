@@ -1,0 +1,15 @@
+load("@rules_go//go:def.bzl", "go_library", "go_test")
+
+go_library(
+    name = "counter",
+    srcs = ["counter.go"],
+    importpath = "github.com/ymotongpoo/bazel-k8s-sample/services/worker/counter",
+    visibility = ["//visibility:public"],
+)
+
+go_test(
+    name = "counter_test",
+    size = "small",
+    srcs = ["counter_test.go"],
+    embed = [":counter"],
+)

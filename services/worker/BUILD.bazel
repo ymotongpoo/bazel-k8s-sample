@@ -1,0 +1,19 @@
+load("@rules_go//go:def.bzl", "go_binary", "go_library")
+
+go_library(
+    name = "worker_lib",
+    srcs = ["main.go"],
+    importpath = "github.com/ymotongpoo/bazel-k8s-sample/services/worker",
+    visibility = ["//visibility:private"],
+    deps = [
+        "//proto/clicks/v1:clicks",
+        "//services/worker/counter",
+        "@org_golang_google_protobuf//encoding/protojson",
+    ],
+)
+
+go_binary(
+    name = "worker",
+    embed = [":worker_lib"],
+    visibility = ["//visibility:public"],
+)
