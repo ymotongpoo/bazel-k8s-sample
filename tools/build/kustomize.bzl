@@ -1,4 +1,6 @@
-"""イメージの digest を Kustomize の Component に書き出すルール。"""
+"""Kustomize のマニフェストをレンダリングして検証するルールとマクロ。"""
+
+load("@rules_shell//shell:sh_test.bzl", "sh_test")
 
 def _kustomize_image_digests_impl(ctx):
     out = ctx.actions.declare_file(ctx.label.name + "/kustomization.yaml")
@@ -40,5 +42,86 @@ kustomize_image_digests = rule(
             executable = True,
             cfg = "exec",
         ),
+    },
+)
+
+# kubeconform に渡す Kubernetes の JSON スキーマ。マニフェストに新しい種類のリソースを足したら、ここにも足す。
+_K8S_SCHEMAS = [
+    "@k8s_schema_deployment_apps_v1//file",
+    "@k8s_schema_namespace_v1//file",
+    "@k8s_schema_service_v1//file",
+]
+
+def _kustomize_build_impl(name, visibility, srcs, overlay, image_digests, _kustomize, _kubeconform, _kubeconform_test, _image_digest_test, _schemas):
+    # kustomize は base、overlay、生成した Component を1つのディレクトリの木の中で読む。
+    # サンドボックスは入力をシンボリックリンクで置くが、kustomize はシンボリックリンクの
+    # kustomization.yaml を読まないので、実体を一時ディレクトリにコピーしてからレンダリングする。
+    native.genrule(
+        name = name,
+        srcs = srcs,
+        outs = [name + ".yaml"],
+        cmd = """
+work=$$(mktemp -d)
+for f in $(SRCS); do
+  rel=$${{f#$(BINDIR)/}}
+  rel=$${{rel#{package}/}}
+  mkdir -p "$$work/$$(dirname "$$rel")"
+  cp -L "$$f" "$$work/$$rel"
+done
+$(execpath {kustomize}) build "$$work/{overlay}" > $@
+rm -rf "$$work"
+""".format(package = native.package_name(), kustomize = _kustomize, overlay = overlay),
+        tools = [_kustomize],
+        visibility = visibility,
+    )
+
+    sh_test(
+        name = name + "_kubeconform_test",
+        size = "small",
+        srcs = [_kubeconform_test],
+        args = [
+            "$(rootpath {})".format(_kubeconform),
+            "$(rootpath :{})".format(name),
+        ] + ["$(rootpath {})".format(s) for s in _schemas],
+        data = [_kubeconform, ":" + name] + _schemas,
+    )
+
+    sh_test(
+        name = name + "_image_digest_test",
+        size = "small",
+        srcs = [_image_digest_test],
+        args = ["$(rootpath :{})".format(name)] + ["$(rootpath {})".format(d) for d in image_digests],
+        data = [":" + name] + image_digests,
+    )
+
+kustomize_build = macro(
+    doc = """overlay を kustomize build でレンダリングし、NAME.yaml を出力する。
+
+    レンダリングした結果を kubeconform で検証する NAME_kubeconform_test と、
+    すべてのイメージが digest で参照されていることを確かめる NAME_image_digest_test も作る。
+    """,
+    implementation = _kustomize_build_impl,
+    attrs = {
+        "srcs": attr.label_list(
+            doc = "base、overlay、Component の kustomization.yaml とマニフェスト。",
+            allow_files = True,
+            mandatory = True,
+            configurable = False,
+        ),
+        "overlay": attr.string(
+            doc = "レンダリングする overlay の、このパッケージからの相対パス。",
+            mandatory = True,
+            configurable = False,
+        ),
+        "image_digests": attr.label_list(
+            doc = "マニフェストで使われるはずのイメージの digest のファイル。",
+            allow_files = True,
+            configurable = False,
+        ),
+        "_kustomize": attr.label(default = "@multitool//tools/kustomize", configurable = False),
+        "_kubeconform": attr.label(default = "@multitool//tools/kubeconform", configurable = False),
+        "_kubeconform_test": attr.label(default = "//tools/build:kubeconform_test.sh", configurable = False),
+        "_image_digest_test": attr.label(default = "//tools/build:image_digest_test.sh", configurable = False),
+        "_schemas": attr.label_list(default = _K8S_SCHEMAS, configurable = False),
     },
 )
