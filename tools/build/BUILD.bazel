@@ -1,3 +1,4 @@
+load("@bazel_skylib//rules:common_settings.bzl", "string_flag")
 load("@bazel_skylib//rules:diff_test.bzl", "diff_test")
 load(":kustomize.bzl", "kustomize_image_digests")
 
@@ -9,6 +10,20 @@ exports_files(
         "kubeconform_test.sh",
     ],
     visibility = ["//visibility:private"],
+)
+
+# イメージとマニフェストを push するレジストリと、リポジトリの接頭辞。
+# 手元の kind のレジストリを既定にし、リリースでは .bazelrc の release の config で変える。
+string_flag(
+    name = "registry",
+    build_setting_default = "localhost:5001",
+    visibility = ["//visibility:public"],
+)
+
+string_flag(
+    name = "repository_prefix",
+    build_setting_default = "bazel-k8s-sample",
+    visibility = ["//visibility:public"],
 )
 
 kustomize_image_digests(

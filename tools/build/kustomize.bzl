@@ -1,12 +1,26 @@
 """Kustomize のマニフェストをレンダリングして検証するルールとマクロ。"""
 
+load("@bazel_skylib//rules:common_settings.bzl", "BuildSettingInfo")
 load("@rules_shell//shell:sh_test.bzl", "sh_test")
+
+def repository_prefix(ctx):
+    """//tools/build:registry と //tools/build:repository_prefix から、イメージのリポジトリの接頭辞を返す。"""
+    return "{}/{}".format(
+        ctx.attr._registry[BuildSettingInfo].value,
+        ctx.attr._repository_prefix[BuildSettingInfo].value,
+    )
+
+REGISTRY_ATTRS = {
+    "_registry": attr.label(default = "//tools/build:registry"),
+    "_repository_prefix": attr.label(default = "//tools/build:repository_prefix"),
+}
 
 def _kustomize_image_digests_impl(ctx):
     out = ctx.actions.declare_file(ctx.label.name + "/kustomization.yaml")
 
     args = ctx.actions.args()
     args.add("-out", out)
+    args.add("-repository_prefix", repository_prefix(ctx))
     digests = []
     for name, target in ctx.attr.images.items():
         files = target.files.to_list()
@@ -29,9 +43,10 @@ kustomize_image_digests = rule(
     doc = """イメージの digest を images に書いた Kustomize の Component を出力する。
 
     出力は NAME/kustomization.yaml で、overlay の components からこのディレクトリを参照する。
+    newName は、//tools/build:registry と //tools/build:repository_prefix の値から決める。
     """,
     implementation = _kustomize_image_digests_impl,
-    attrs = {
+    attrs = REGISTRY_ATTRS | {
         "images": attr.string_keyed_label_dict(
             doc = "マニフェストの中のイメージの名前から、その digest を書いたファイルへの対応。",
             allow_files = True,
@@ -41,6 +56,22 @@ kustomize_image_digests = rule(
             default = "//tools/build/kustomize_images",
             executable = True,
             cfg = "exec",
+        ),
+    },
+)
+
+def _repository_file_impl(ctx):
+    out = ctx.actions.declare_file(ctx.label.name + ".txt")
+    ctx.actions.write(out, "{}/{}\n".format(repository_prefix(ctx), ctx.attr.repository))
+    return [DefaultInfo(files = depset([out]))]
+
+repository_file = rule(
+    doc = "イメージやアーティファクトを push するリポジトリを、レジストリのビルドの設定から決めてファイルに書く。",
+    implementation = _repository_file_impl,
+    attrs = REGISTRY_ATTRS | {
+        "repository": attr.string(
+            doc = "接頭辞の後ろに付けるリポジトリの名前。",
+            mandatory = True,
         ),
     },
 )

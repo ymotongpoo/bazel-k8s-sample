@@ -31,7 +31,7 @@ fileExistenceTests:
     shouldExist: false
 """
 
-def _go_service_impl(name, visibility, embed, base, registry, _healthz_test):
+def _go_service_impl(name, visibility, embed, base, _healthz_test):
     go_binary(
         name = name,
         embed = embed,
@@ -96,8 +96,13 @@ def _go_service_impl(name, visibility, embed, base, registry, _healthz_test):
     image_push(
         name = name + "_push",
         image = ":" + name + "_index",
-        registry = registry.split("/", 1)[0],
-        repository = "{}/{}".format(registry.split("/", 1)[1], name),
+        # push 先は //tools/build:registry と //tools/build:repository_prefix で決める。
+        build_settings = {
+            "registry": "//tools/build:registry",
+            "repository_prefix": "//tools/build:repository_prefix",
+        },
+        registry = "{{.registry}}",
+        repository = "{{.repository_prefix}}/" + name,
         tag_file = ":" + name + "_tags",
         visibility = visibility,
     )
@@ -157,11 +162,6 @@ go_service = macro(
         "base": attr.label(
             doc = "イメージのベース。",
             default = "@distroless_static",
-            configurable = False,
-        ),
-        "registry": attr.string(
-            doc = "イメージを push するレジストリとリポジトリの接頭辞。リポジトリは registry/name になる。",
-            default = "localhost:5001/bazel-k8s-sample",
             configurable = False,
         ),
         "_healthz_test": attr.label(
