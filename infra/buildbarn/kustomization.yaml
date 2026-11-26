@@ -1,0 +1,87 @@
+# Buildbarn の公式のサンプルの構成（bb-deployments）を、手元の kind のノード1台に収まるように変えて使う。
+apiVersion: kustomize.config.k8s.io/v1beta1
+kind: Kustomization
+resources:
+  - https://github.com/buildbarn/bb-deployments//kubernetes?ref=7cd419f6526ea5d1f25b0803dee32d64f26fbdec
+patches:
+  # フロントエンドとワーカーは1台ずつにする。ワーカー1台は8個のアクションを同時に実行する。
+  - target:
+      kind: Deployment
+      name: frontend
+    patch: |-
+      - op: replace
+        path: /spec/replicas
+        value: 1
+  - target:
+      kind: Deployment
+      name: worker-ubuntu22-04
+    patch: |-
+      - op: replace
+        path: /spec/replicas
+        value: 1
+  # フロントエンドを NodePort の 30980 番で待ち受けさせ、tools/dev/kind-up.sh がホストの 127.0.0.1:8980 につなぐ。
+  - target:
+      kind: Service
+      name: frontend
+    patch: |-
+      - op: replace
+        path: /spec/type
+        value: NodePort
+      - op: add
+        path: /spec/ports/0/nodePort
+        value: 30980
+  # ビルドの結果を表示する bb-portal とそのデータベースは、この構成では使わない。
+  - target:
+      kind: Deployment
+      name: portal
+    patch: |-
+      $patch: delete
+      apiVersion: apps/v1
+      kind: Deployment
+      metadata:
+        name: portal
+  - target:
+      kind: Service
+      name: portal-bes
+    patch: |-
+      $patch: delete
+      apiVersion: v1
+      kind: Service
+      metadata:
+        name: portal-bes
+  - target:
+      kind: Service
+      name: portal
+    patch: |-
+      $patch: delete
+      apiVersion: v1
+      kind: Service
+      metadata:
+        name: portal
+  - target:
+      kind: Ingress
+      name: portal
+    patch: |-
+      $patch: delete
+      apiVersion: networking.k8s.io/v1
+      kind: Ingress
+      metadata:
+        name: portal
+  - target:
+      kind: Deployment
+      name: postgres
+    patch: |-
+      $patch: delete
+      apiVersion: apps/v1
+      kind: Deployment
+      metadata:
+        name: postgres
+  - target:
+      kind: Service
+      name: postgres
+    patch: |-
+      $patch: delete
+      apiVersion: v1
+      kind: Service
+      metadata:
+        name: postgres

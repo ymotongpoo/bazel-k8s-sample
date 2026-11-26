@@ -31,6 +31,10 @@ nodes:
       - containerPort: 30092
         hostPort: 9092
         listenAddress: 127.0.0.1
+      # Buildbarn のフロントエンドの gRPC
+      - containerPort: 30980
+        hostPort: 8980
+        listenAddress: 127.0.0.1
 YAML
 fi
 
@@ -53,3 +57,6 @@ kubectl apply -f deploy/flux/dev.yaml
 # 6. ビルドの基盤のサービス。
 kubectl apply -f infra/bazel-remote/bazel-remote.yaml
 kubectl -n build rollout status deployment/bazel-remote --timeout=5m
+kubectl apply -k infra/buildbarn
+kubectl -n buildbarn rollout status statefulset/storage --timeout=10m
+kubectl -n buildbarn rollout status deployment/frontend deployment/scheduler-ubuntu22-04 deployment/worker-ubuntu22-04 --timeout=15m
