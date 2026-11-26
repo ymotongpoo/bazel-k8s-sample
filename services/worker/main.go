@@ -38,7 +38,8 @@ func main() {
 			http.Error(w, "invalid request", http.StatusBadRequest)
 			return
 		}
-		counts.Add(ev.GetCode())
+		n := counts.Add(ev.GetCode())
+		log.Printf("click code=%s count=%d", ev.GetCode(), n)
 		w.WriteHeader(http.StatusNoContent)
 	})
 	mux.HandleFunc("GET /stats/{code}", func(w http.ResponseWriter, r *http.Request) {
