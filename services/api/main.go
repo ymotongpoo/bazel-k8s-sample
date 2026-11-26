@@ -2,6 +2,7 @@
 package main
 
 import (
+	"bytes"
 	"embed"
 	"flag"
 	"io"
@@ -9,10 +10,12 @@ import (
 	"log"
 	"net"
 	"net/http"
+	"time"
 
 	"golang.org/x/time/rate"
 	"google.golang.org/protobuf/encoding/protojson"
 
+	clicksv1 "github.com/ymotongpoo/bazel-k8s-sample/proto/clicks/v1"
 	shortenerv1 "github.com/ymotongpoo/bazel-k8s-sample/proto/shortener/v1"
 	"github.com/ymotongpoo/bazel-k8s-sample/services/api/shortener"
 )
@@ -26,12 +29,16 @@ func main() {
 	addr := flag.String("addr", ":8080", "listen address")
 	limit := flag.Float64("rate", 10, "shorten requests allowed per second")
 	burst := flag.Int("burst", 20, "maximum burst of shorten requests")
+	worker := flag.String("worker", "", "base URL of the click worker; clicks are not recorded if empty")
 	flag.Parse()
 
 	store := shortener.NewStore()
 	// 発行の要求だけを、サーバー全体でまとめて制限する。
 	limiter := rate.NewLimiter(rate.Limit(*limit), *burst)
 	mux := http.NewServeMux()
+	mux.HandleFunc("GET /healthz", func(w http.ResponseWriter, r *http.Request) {
+		io.WriteString(w, "ok\n")
+	})
 	mux.HandleFunc("POST /shorten", func(w http.ResponseWriter, r *http.Request) {
 		if !limiter.Allow() {
 			http.Error(w, "too many requests", http.StatusTooManyRequests)
@@ -73,6 +80,9 @@ func main() {
 			http.NotFound(w, r)
 			return
 		}
+		if *worker != "" {
+			go recordClick(*worker, r.PathValue("code"))
+		}
 		http.Redirect(w, r, url, http.StatusFound)
 	})
 
@@ -83,4 +93,20 @@ func main() {
 	}
 	log.Printf("listening on %s", ln.Addr())
 	log.Fatal(http.Serve(ln, mux))
+}
+
+// recordClick はワーカーにアクセスを1回知らせる。失敗してもリダイレクトには影響させない。
+func recordClick(worker, code string) {
+	body, err := protojson.Marshal(&clicksv1.ClickEvent{Code: code})
+	if err != nil {
+		log.Printf("cannot encode click: %v", err)
+		return
+	}
+	client := &http.Client{Timeout: 2 * time.Second}
+	resp, err := client.Post(worker+"/clicks", "application/json", bytes.NewReader(body))
+	if err != nil {
+		log.Printf("cannot record click: %v", err)
+		return
+	}
+	resp.Body.Close()
 }

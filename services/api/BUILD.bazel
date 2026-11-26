@@ -30,6 +30,7 @@ go_library(
     importpath = "github.com/ymotongpoo/bazel-k8s-sample/services/api",
     visibility = ["//visibility:private"],
     deps = [
+        "//proto/clicks/v1:clicks",
         "//proto/shortener/v1:shortener",
         "//services/api/shortener",
         "@org_golang_google_protobuf//encoding/protojson",
