@@ -1,13 +1,14 @@
 """Go のサービスの実行ファイル、コンテナイメージ、その共通のテストを定義するマクロ。"""
 
 load("@bazel_lib//lib:expand_template.bzl", "expand_template")
-load("@bazel_lib//lib:transitions.bzl", "platform_transition_filegroup")
 load("@bazel_skylib//rules:write_file.bzl", "write_file")
-load("@container_structure_test//:defs.bzl", "container_structure_test")
 load("@rules_go//go:def.bzl", "go_binary")
-load("@rules_oci//oci:defs.bzl", "oci_image", "oci_image_index", "oci_load", "oci_push")
+load("@rules_img//img:image.bzl", "image_index", "image_manifest")
+load("@rules_img//img:layer.bzl", "file_metadata", "image_layer")
+load("@rules_img//img:load.bzl", "image_load")
+load("@rules_img//img:push.bzl", "image_push")
+load("@rules_img//img:test.bzl", "image_structure_test")
 load("@rules_shell//shell:sh_test.bzl", "sh_test")
-load("@tar.bzl", "tar")
 
 # イメージをビルドするプラットフォーム。
 _IMAGE_PLATFORMS = [
@@ -46,44 +47,41 @@ def _go_service_impl(name, visibility, embed, base, registry, _healthz_test):
         data = [":" + name],
     )
 
+    binary = "/usr/local/bin/" + name
+
     # 実行ファイルを /usr/local/bin に置いたレイヤー。
-    # 置き場所、所有者、モード、更新時刻を mtree で明示し、レイヤーの digest をビルドした時刻に左右させない。
-    tar(
+    image_layer(
         name = name + "_layer",
-        srcs = [":" + name],
-        mtree = [
-            "./usr type=dir uid=0 gid=0 mode=0755 time=1672560000",
-            "./usr/local type=dir uid=0 gid=0 mode=0755 time=1672560000",
-            "./usr/local/bin type=dir uid=0 gid=0 mode=0755 time=1672560000",
-            "./usr/local/bin/{name} type=file uid=0 gid=0 mode=0755 time=1672560000 content=$(execpath :{name})".format(name = name),
-        ],
+        srcs = {binary: ":" + name},
+        default_metadata = file_metadata(
+            gid = 0,
+            mode = "0755",
+            uid = 0,
+        ),
     )
 
-    oci_image(
+    image_manifest(
         name = name + "_image",
         base = base,
-        entrypoint = ["/usr/local/bin/" + name],
-        tars = [":" + name + "_layer"],
+        entrypoint = [binary],
+        layers = [":" + name + "_layer"],
         visibility = visibility,
     )
 
     # linux/amd64 と linux/arm64 のイメージをまとめたインデックス。
-    oci_image_index(
+    image_index(
         name = name + "_index",
-        images = [":" + name + "_image"],
+        manifests = [":" + name + "_image"],
         platforms = _IMAGE_PLATFORMS,
         visibility = visibility,
     )
 
-    # インデックスに入るのと同じ構成でビルドした、ホストの CPU 向けのイメージ。
-    # ホストの構成でビルドしたイメージは、インデックスの中のイメージと digest が一致しない。
-    platform_transition_filegroup(
-        name = name + "_image_host_cpu",
-        srcs = [":" + name + "_image"],
-        target_platform = select({
-            "@platforms//cpu:aarch64": "//platforms:linux_arm64",
-            "@platforms//cpu:x86_64": "//platforms:linux_amd64",
-        }),
+    # インデックスの digest を書いたファイル。マニフェストに埋め込む。
+    native.filegroup(
+        name = name + "_index.digest",
+        srcs = [":" + name + "_index"],
+        output_group = "digest",
+        visibility = visibility,
     )
 
     # --stamp を付けたときはコミットを、付けないときは unstamped をタグにする。
@@ -95,41 +93,46 @@ def _go_service_impl(name, visibility, embed, base, registry, _healthz_test):
     )
 
     # bazel run で、インデックスをレジストリに push する。
-    oci_push(
+    image_push(
         name = name + "_push",
         image = ":" + name + "_index",
-        remote_tags = ":" + name + "_tags",
-        repository = "{}/{}".format(registry, name),
+        registry = registry.split("/", 1)[0],
+        repository = "{}/{}".format(registry.split("/", 1)[1], name),
+        tag_file = ":" + name + "_tags",
         visibility = visibility,
     )
 
+    # インデックスに入るのと同じプラットフォームでビルドした、ホストの CPU 向けのイメージ。
+    image_manifest(
+        name = name + "_image_host_cpu",
+        base = base,
+        entrypoint = [binary],
+        layers = [":" + name + "_layer"],
+        platform = select({
+            "@platforms//cpu:aarch64": "//platforms:linux_arm64",
+            "@platforms//cpu:x86_64": "//platforms:linux_amd64",
+        }),
+    )
+
     # bazel run で、ホストの CPU 向けのイメージを Docker に読み込む。
-    oci_load(
+    image_load(
         name = name + "_load",
         image = ":" + name + "_image_host_cpu",
-        repo_tags = ["bazel-k8s-sample/{}:latest".format(name)],
+        tag = "bazel-k8s-sample/{}:latest".format(name),
     )
 
     write_file(
         name = name + "_image_test_config",
         out = name + "_image_test.yaml",
-        content = [_STRUCTURE_TEST.format(binary = "/usr/local/bin/" + name)],
+        content = [_STRUCTURE_TEST.format(binary = binary)],
     )
 
-    # oci_load が Docker に読み込ませる tar を、ファイルとして取り出す。
-    native.filegroup(
-        name = name + "_image_tarball",
-        srcs = [":" + name + "_load"],
-        output_group = "tarball",
-    )
-
-    # イメージを Docker で起動せずに、tar の中身と設定だけを検査する。
-    container_structure_test(
+    # インデックスの各プラットフォームのイメージを、レイヤーの中身を取得せずに、設定と mtree で検査する。
+    image_structure_test(
         name = name + "_image_test",
         size = "small",
         configs = [":" + name + "_image_test_config"],
-        driver = "tar",
-        image = ":" + name + "_image_tarball",
+        image = ":" + name + "_index",
     )
 
 go_service = macro(
@@ -140,8 +143,9 @@ go_service = macro(
     "listening on ADDR" の形でログに出す必要がある。
 
     コンテナイメージとして、name_image（ビルドしたプラットフォーム向けのイメージ）、
-    name_index（linux/amd64 と linux/arm64 のインデックス）、name_load（Docker への読み込み）、
-    name_image_test（イメージの構造のテスト）、name_push（インデックスのレジストリへの push）も作る。
+    name_index（linux/amd64 と linux/arm64 のインデックス）、name_index.digest（その digest）、
+    name_load（Docker への読み込み）、name_image_test（イメージの構造のテスト）、
+    name_push（インデックスのレジストリへの push）も作る。
     """,
     implementation = _go_service_impl,
     attrs = {
