@@ -18,6 +18,8 @@ jobs:
         with:
           bazelisk-cache: true
           repository-cache: true
+          # pull request のビルドは、GitHub Actions のキャッシュを読むだけで、保存しない。
+          cache-save: ${{ github.event_name == 'push' }}
       - name: BUILD ファイルの書式と lint
         run: bazel run --config=ci //:buildifier.check
       - name: Gazelle が生成する BUILD ファイルとの差分
@@ -37,5 +39,16 @@ jobs:
         with:
           bazelisk-cache: true
           repository-cache: true
+          disk-cache: ${{ github.job }}
+          cache-save: ${{ github.event_name == 'push' }}
       - name: すべてのターゲットのビルドとテスト
-        run: bazel test --config=ci //...
+        run: bazel test --config=ci --config=observe //...
+      - name: ビルドの記録を保存する
+        if: always()
+        uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
+        with:
+          name: bazel-logs
+          path: |
+            bazel-bep.json
+            bazel-profile.json.gz
+          retention-days: 7
