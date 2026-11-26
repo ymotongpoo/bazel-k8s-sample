@@ -53,3 +53,6 @@ dist/
 .DS_Store
 .vscode/
 .idea/
+
+# 手元のリモートキャッシュの mTLS の証明書と鍵（tools/dev/cache-certs.sh が作る）
+tools/dev/certs/

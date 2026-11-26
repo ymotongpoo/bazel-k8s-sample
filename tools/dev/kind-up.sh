@@ -55,6 +55,7 @@ flux install
 kubectl apply -f deploy/flux/dev.yaml
 
 # 6. ビルドの基盤のサービス。
+tools/dev/cache-certs.sh
 kubectl apply -f infra/bazel-remote/bazel-remote.yaml
 kubectl -n build rollout status deployment/bazel-remote --timeout=5m
 kubectl apply -k infra/buildbarn

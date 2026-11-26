@@ -1,4 +1,6 @@
 # Bazel のリモートキャッシュのサーバー。手元の kind で試すための構成で、キャッシュはノードの emptyDir に置く。
+# クライアントの証明書を持つビルドだけが書き込め、証明書を持たないビルドは読むことだけができる。
+# 証明書と鍵の Secret は tools/dev/cache-certs.sh が作る。
 apiVersion: v1
 kind: Namespace
 metadata:
@@ -27,6 +29,10 @@ spec:
           args:
             - --dir=/data
             - --max_size=10
+            - --tls_cert_file=/tls/server.pem
+            - --tls_key_file=/tls/server.key
+            - --tls_ca_file=/tls/ca.pem
+            - --allow_unauthenticated_reads
           ports:
             - name: grpc
               containerPort: 9092
@@ -35,10 +41,16 @@ spec:
           volumeMounts:
             - name: data
               mountPath: /data
+            - name: tls
+              mountPath: /tls
+              readOnly: true
       volumes:
         - name: data
           emptyDir:
             sizeLimit: 12Gi
+        - name: tls
+          secret:
+            secretName: bazel-remote-tls
 ---
 # kind のノードの 30092 番を、tools/dev/kind-up.sh がホストの 127.0.0.1:9092 につなぐ。
 apiVersion: v1
