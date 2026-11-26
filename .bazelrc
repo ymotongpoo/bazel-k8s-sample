@@ -13,3 +13,6 @@ build --workspace_status_command=tools/workspace_status.sh
 
 # レジストリへの push は、コミットをタグに埋め込んで行う。bazel run --config=push で使う。
 run:push --stamp
+
+# 手元の kind の bazel-remote をリモートキャッシュに使う。bazel build --config=cache で使う。
+common:cache --remote_cache=grpc://localhost:9092
