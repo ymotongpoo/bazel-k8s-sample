@@ -1,0 +1,36 @@
+# v で始まるタグの push で、すべてのテストを実行してから、イメージと本番のマニフェストを
+# GitHub Container Registry に push する。クラスタへの適用は Flux に任せ、ここでは行わない。
+name: Release
+
+on:
+  push:
+    tags: ["v*"]
+
+permissions:
+  contents: read
+  packages: write
+
+jobs:
+  release:
+    runs-on: ubuntu-24.04
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+      - uses: bazel-contrib/setup-bazel@f34d6a05eae3c24acab7fa54587492daeaeffdab # 0.19.2
+        with:
+          bazelisk-cache: true
+          repository-cache: true
+          disk-cache: test
+          cache-save: false
+      - name: すべてのターゲットのビルドとテスト
+        run: bazel test --config=ci --config=release //...
+      - uses: docker/login-action@8aa5831fb8d48d8f76594c7ddde61ae58019f550 # v4.8.0
+        with:
+          registry: ghcr.io
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+      - name: イメージと本番のマニフェストを push する
+        run: bazel run --config=ci --config=release //deploy:push_release
+      - name: 本番のマニフェストの digest を記録する
+        run: |
+          bazel build --config=ci --config=release //deploy:prod_manifests.digest
+          echo "本番のマニフェストの digest: $(cat bazel-bin/deploy/prod_manifests.json.sha256)" >> "${GITHUB_STEP_SUMMARY}"

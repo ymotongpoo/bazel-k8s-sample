@@ -51,3 +51,9 @@ common:ci --lockfile_mode=error
 common:ci --color=yes
 common:ci --curses=no
 common:ci --show_progress_rate_limit=5
+
+# リリースで、GitHub Container Registry に push する。bazel run --config=release //deploy:push_release で使う。
+# アーティファクトの注釈にコミットを入れるので、digest を求めるビルドにも --stamp を付ける。
+common:release --stamp
+common:release --//tools/build:registry=ghcr.io
+common:release --//tools/build:repository_prefix=ymotongpoo/bazel-k8s-sample
