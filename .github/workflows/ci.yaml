@@ -1,0 +1,41 @@
+# main への push と pull request で、生成物と宣言の食い違いを検査し、すべてのテストを実行する。
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+
+permissions:
+  contents: read
+
+jobs:
+  check:
+    runs-on: ubuntu-24.04
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+      - uses: bazel-contrib/setup-bazel@f34d6a05eae3c24acab7fa54587492daeaeffdab # 0.19.2
+        with:
+          bazelisk-cache: true
+          repository-cache: true
+      - name: BUILD ファイルの書式と lint
+        run: bazel run --config=ci //:buildifier.check
+      - name: Gazelle が生成する BUILD ファイルとの差分
+        run: |
+          bazel run --config=ci //:gazelle
+          git diff --exit-code
+      - name: bazel mod tidy の差分
+        run: |
+          bazel mod tidy --config=ci
+          git diff --exit-code
+
+  test:
+    runs-on: ubuntu-24.04
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+      - uses: bazel-contrib/setup-bazel@f34d6a05eae3c24acab7fa54587492daeaeffdab # 0.19.2
+        with:
+          bazelisk-cache: true
+          repository-cache: true
+      - name: すべてのターゲットのビルドとテスト
+        run: bazel test --config=ci //...

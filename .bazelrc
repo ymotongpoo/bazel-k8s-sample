@@ -32,3 +32,11 @@ common:observe --profile=bazel-profile.json.gz
 # kubectl -n buildbarn port-forward svc/portal-bes 18082:8082 と svc/portal 18081:8081 でつないでから使う。
 common:portal --bes_backend=grpc://localhost:18082
 common:portal --bes_results_url=http://localhost:18081/bazel-invocations/
+
+# CI で使う。bazel test --config=ci で使う。
+# MODULE.bazel.lock が MODULE.bazel と食い違っていたら、更新せずにエラーにする。
+common:ci --lockfile_mode=error
+# ログに書き出すので、進捗の表示を間引き、色を付ける。
+common:ci --color=yes
+common:ci --curses=no
+common:ci --show_progress_rate_limit=5
