@@ -1,0 +1,24 @@
+load("//tools/build:kustomize.bzl", "kustomize_build", "kustomize_image_digests")
+
+# 2つのサービスのイメージのインデックスの digest を、images に書いた Component。
+kustomize_image_digests(
+    name = "images",
+    images = {
+        "api": "//services/api:api_index.digest",
+        "worker": "//services/worker:worker_index.digest",
+    },
+)
+
+# 手元の kind のクラスタ向けのマニフェスト。
+kustomize_build(
+    name = "dev",
+    srcs = glob([
+        "base/*.yaml",
+        "overlays/dev/*.yaml",
+    ]) + [":images"],
+    image_digests = [
+        "//services/api:api_index.digest",
+        "//services/worker:worker_index.digest",
+    ],
+    overlay = "overlays/dev",
+)
