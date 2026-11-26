@@ -80,5 +80,30 @@
         "cpu": "arm64"
       }
     ]
+  },
+  "target-determinator": {
+    "binaries": [
+      {
+        "kind": "file",
+        "url": "https://github.com/bazel-contrib/target-determinator/releases/download/v0.34.1/target-determinator.linux.amd64",
+        "sha256": "7f3360cf38d43d4d106440e8ce9d394d4b16bde52af11cd010e897394cec439b",
+        "os": "linux",
+        "cpu": "x86_64"
+      },
+      {
+        "kind": "file",
+        "url": "https://github.com/bazel-contrib/target-determinator/releases/download/v0.34.1/target-determinator.linux.arm64",
+        "sha256": "55d362d87b1c8d946b50ccc483d32ef48620ad1dd95eebd14e2ad41baf1baa2c",
+        "os": "linux",
+        "cpu": "arm64"
+      },
+      {
+        "kind": "file",
+        "url": "https://github.com/bazel-contrib/target-determinator/releases/download/v0.34.1/target-determinator.darwin.arm64",
+        "sha256": "f36157a1389e30ca93a2a0fa1a648f2e29f5107dc7c320ea0da3951f3ea61d9b",
+        "os": "macos",
+        "cpu": "arm64"
+      }
+    ]
   }
 }
