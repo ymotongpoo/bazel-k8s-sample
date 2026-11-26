@@ -15,6 +15,7 @@ if [[ "$(docker inspect -f '{{.State.Running}}' "${reg_name}" 2>/dev/null || tru
 fi
 
 # 2. クラスタ。containerd にレジストリの設定のディレクトリを読ませる。
+#    ビルドの基盤のサービス（infra/）は NodePort で待ち受け、ホストの 127.0.0.1 につなぐ。
 if ! kind get clusters | grep -qx "${cluster}"; then
   kind create cluster --name "${cluster}" --image "${node_image}" --config - <<YAML
 kind: Cluster
@@ -23,6 +24,13 @@ containerdConfigPatches:
   - |-
     [plugins."io.containerd.grpc.v1.cri".registry]
       config_path = "/etc/containerd/certs.d"
+nodes:
+  - role: control-plane
+    extraPortMappings:
+      # bazel-remote の gRPC
+      - containerPort: 30092
+        hostPort: 9092
+        listenAddress: 127.0.0.1
 YAML
 fi
 
@@ -41,3 +49,7 @@ fi
 # 5. Flux のコントローラーを入れ、dev のマニフェストを取得して適用させる。
 flux install
 kubectl apply -f deploy/flux/dev.yaml
+
+# 6. ビルドの基盤のサービス。
+kubectl apply -f infra/bazel-remote/bazel-remote.yaml
+kubectl -n build rollout status deployment/bazel-remote --timeout=5m
