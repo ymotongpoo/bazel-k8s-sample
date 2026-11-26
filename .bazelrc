@@ -7,3 +7,9 @@ common --repo_env=BAZEL_DO_NOT_DETECT_CPP_TOOLCHAIN=1
 
 # Go は cgo なしでビルドし、どのプラットフォーム向けでも静的にリンクする。
 common --@rules_go//go/config:pure
+
+# --stamp を付けたときに、イメージとマニフェストのタグに使うコミットを渡す。
+build --workspace_status_command=tools/workspace_status.sh
+
+# レジストリへの push は、コミットをタグに埋め込んで行う。bazel run --config=push で使う。
+run:push --stamp
