@@ -1,10 +1,11 @@
 """Go のサービスの実行ファイル、コンテナイメージ、その共通のテストを定義するマクロ。"""
 
+load("@bazel_lib//lib:expand_template.bzl", "expand_template")
 load("@bazel_lib//lib:transitions.bzl", "platform_transition_filegroup")
 load("@bazel_skylib//rules:write_file.bzl", "write_file")
 load("@container_structure_test//:defs.bzl", "container_structure_test")
 load("@rules_go//go:def.bzl", "go_binary")
-load("@rules_oci//oci:defs.bzl", "oci_image", "oci_image_index", "oci_load")
+load("@rules_oci//oci:defs.bzl", "oci_image", "oci_image_index", "oci_load", "oci_push")
 load("@rules_shell//shell:sh_test.bzl", "sh_test")
 load("@tar.bzl", "tar")
 
@@ -29,7 +30,7 @@ fileExistenceTests:
     shouldExist: false
 """
 
-def _go_service_impl(name, visibility, embed, base, _healthz_test):
+def _go_service_impl(name, visibility, embed, base, registry, _healthz_test):
     go_binary(
         name = name,
         embed = embed,
@@ -85,6 +86,23 @@ def _go_service_impl(name, visibility, embed, base, _healthz_test):
         }),
     )
 
+    # --stamp を付けたときはコミットを、付けないときは unstamped をタグにする。
+    expand_template(
+        name = name + "_tags",
+        out = name + "_tags.txt",
+        stamp_substitutions = {"unstamped": "{{STABLE_GIT_COMMIT}}"},
+        template = ["unstamped"],
+    )
+
+    # bazel run で、インデックスをレジストリに push する。
+    oci_push(
+        name = name + "_push",
+        image = ":" + name + "_index",
+        remote_tags = ":" + name + "_tags",
+        repository = "{}/{}".format(registry, name),
+        visibility = visibility,
+    )
+
     # bazel run で、ホストの CPU 向けのイメージを Docker に読み込む。
     oci_load(
         name = name + "_load",
@@ -123,7 +141,7 @@ go_service = macro(
 
     コンテナイメージとして、name_image（ビルドしたプラットフォーム向けのイメージ）、
     name_index（linux/amd64 と linux/arm64 のインデックス）、name_load（Docker への読み込み）、
-    name_image_test（イメージの構造のテスト）も作る。
+    name_image_test（イメージの構造のテスト）、name_push（インデックスのレジストリへの push）も作る。
     """,
     implementation = _go_service_impl,
     attrs = {
@@ -135,6 +153,11 @@ go_service = macro(
         "base": attr.label(
             doc = "イメージのベース。",
             default = "@distroless_static",
+            configurable = False,
+        ),
+        "registry": attr.string(
+            doc = "イメージを push するレジストリとリポジトリの接頭辞。リポジトリは registry/name になる。",
+            default = "localhost:5001/bazel-k8s-sample",
             configurable = False,
         ),
         "_healthz_test": attr.label(
