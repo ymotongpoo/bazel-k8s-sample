@@ -1,2 +1,23 @@
+load("@bazel_lib//lib:transitions.bzl", "platform_transition_filegroup")
+
 # このディレクトリの下の go_binary は、すべてサービスとして go_service で定義する。
 # gazelle:map_kind go_binary go_service //tools/build:go_service.bzl
+
+# すべてのサービスの実行ファイルを、プラットフォームごとにまとめてビルドする。
+platform_transition_filegroup(
+    name = "binaries_linux_amd64",
+    srcs = [
+        "//services/api",
+        "//services/worker",
+    ],
+    target_platform = "//platforms:linux_amd64",
+)
+
+platform_transition_filegroup(
+    name = "binaries_linux_arm64",
+    srcs = [
+        "//services/api",
+        "//services/worker",
+    ],
+    target_platform = "//platforms:linux_arm64",
+)
