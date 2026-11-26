@@ -1,0 +1,28 @@
+# Flux に、レジストリの本番のマニフェストを取得してクラスタに適用させる。
+# どのリリースを本番に出すかは ref.digest で決める。昇格もロールバックも、この digest を変えるコミットで行う。
+apiVersion: source.toolkit.fluxcd.io/v1
+kind: OCIRepository
+metadata:
+  name: shortener-prod
+  namespace: flux-system
+spec:
+  interval: 1m
+  url: oci://kind-registry:5000/bazel-k8s-sample/manifests-prod
+  insecure: true
+  ref:
+    digest: sha256:8acf26f748c5d02ce47538982b68b3a918c700f4c47a39f23e274d08c8bfbe62
+---
+apiVersion: kustomize.toolkit.fluxcd.io/v1
+kind: Kustomization
+metadata:
+  name: shortener-prod
+  namespace: flux-system
+spec:
+  interval: 10m
+  sourceRef:
+    kind: OCIRepository
+    name: shortener-prod
+  path: ./
+  prune: true
+  wait: true
+  timeout: 2m
