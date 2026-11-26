@@ -1,0 +1,21 @@
+load("@rules_go//go:def.bzl", "go_binary", "go_library", "go_test")
+
+go_library(
+    name = "kustomize_images_lib",
+    srcs = ["main.go"],
+    importpath = "github.com/ymotongpoo/bazel-k8s-sample/tools/build/kustomize_images",
+    visibility = ["//visibility:private"],
+)
+
+go_binary(
+    name = "kustomize_images",
+    embed = [":kustomize_images_lib"],
+    visibility = ["//visibility:public"],
+)
+
+go_test(
+    name = "kustomize_images_test",
+    size = "small",
+    srcs = ["main_test.go"],
+    embed = [":kustomize_images_lib"],
+)

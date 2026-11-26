@@ -1,5 +1,24 @@
+load("@bazel_skylib//rules:diff_test.bzl", "diff_test")
+load(":kustomize.bzl", "kustomize_image_digests")
+
 # go_service マクロが作るテストだけが使うスクリプト。ほかのパッケージからは直接参照させない。
 exports_files(
     ["healthz_test.sh"],
     visibility = ["//visibility:private"],
+)
+
+kustomize_image_digests(
+    name = "test_images",
+    testonly = True,
+    images = {
+        "worker": "testdata/worker.digest",
+        "api": "testdata/api.digest",
+    },
+)
+
+diff_test(
+    name = "kustomize_image_digests_test",
+    size = "small",
+    file1 = ":test_images",
+    file2 = "testdata/kustomization.golden.yaml",
 )
