@@ -1,4 +1,5 @@
-load("@rules_go//go:def.bzl", "go_binary", "go_library")
+load("@rules_go//go:def.bzl", "go_library")
+load("//tools/build:go_service.bzl", "go_service")
 
 go_library(
     name = "worker_lib",
@@ -12,7 +13,7 @@ go_library(
     ],
 )
 
-go_binary(
+go_service(
     name = "worker",
     embed = [":worker_lib"],
     visibility = ["//visibility:public"],

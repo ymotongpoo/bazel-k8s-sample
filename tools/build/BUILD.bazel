@@ -1,0 +1,5 @@
+# go_service マクロが作るテストだけが使うスクリプト。ほかのパッケージからは直接参照させない。
+exports_files(
+    ["healthz_test.sh"],
+    visibility = ["//visibility:private"],
+)

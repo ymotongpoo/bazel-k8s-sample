@@ -1,0 +1,2 @@
+# このディレクトリの下の go_binary は、すべてサービスとして go_service で定義する。
+# gazelle:map_kind go_binary go_service //tools/build:go_service.bzl

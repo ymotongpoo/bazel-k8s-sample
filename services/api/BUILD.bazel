@@ -1,8 +1,9 @@
 load("@bazel_lib//lib:copy_to_directory.bzl", "copy_to_directory")
-load("@rules_go//go:def.bzl", "go_binary", "go_library")
+load("@rules_go//go:def.bzl", "go_library")
 load("@rules_shell//shell:sh_test.bzl", "sh_test")
+load("//tools/build:go_service.bzl", "go_service")
 
-go_binary(
+go_service(
     name = "api",
     embed = [":api_lib"],
     visibility = ["//visibility:public"],
