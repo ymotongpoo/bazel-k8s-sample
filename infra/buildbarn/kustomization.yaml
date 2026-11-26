@@ -30,34 +30,15 @@ patches:
       - op: add
         path: /spec/ports/0/nodePort
         value: 30980
-  # ビルドの結果を表示する bb-portal とそのデータベースは、この構成では使わない。
+  # ビルドの結果を表示する bb-portal は1台にする。BES は 8082 番、画面は 8081 番で、kubectl port-forward で使う。
   - target:
       kind: Deployment
       name: portal
     patch: |-
-      $patch: delete
-      apiVersion: apps/v1
-      kind: Deployment
-      metadata:
-        name: portal
-  - target:
-      kind: Service
-      name: portal-bes
-    patch: |-
-      $patch: delete
-      apiVersion: v1
-      kind: Service
-      metadata:
-        name: portal-bes
-  - target:
-      kind: Service
-      name: portal
-    patch: |-
-      $patch: delete
-      apiVersion: v1
-      kind: Service
-      metadata:
-        name: portal
+      - op: replace
+        path: /spec/replicas
+        value: 1
+  # Ingress のコントローラーは入れていないので、bb-portal の Ingress は使わない。
   - target:
       kind: Ingress
       name: portal
@@ -67,21 +48,3 @@ patches:
       kind: Ingress
       metadata:
         name: portal
-  - target:
-      kind: Deployment
-      name: postgres
-    patch: |-
-      $patch: delete
-      apiVersion: apps/v1
-      kind: Deployment
-      metadata:
-        name: postgres
-  - target:
-      kind: Service
-      name: postgres
-    patch: |-
-      $patch: delete
-      apiVersion: v1
-      kind: Service
-      metadata:
-        name: postgres

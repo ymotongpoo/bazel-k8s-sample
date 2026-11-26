@@ -22,3 +22,13 @@ common:remote --remote_executor=grpc://localhost:8980
 common:remote --extra_execution_platforms=//platforms:remote_linux_amd64
 # 同時に実行するアクションの数は、手元の CPU の数ではなくワーカーの数で決める。
 common:remote --jobs=16
+
+# ビルドの記録をファイルに残す。bazel build --config=observe で使う。
+common:observe --build_event_json_file=bazel-bep.json
+common:observe --execution_log_compact_file=bazel-exec.log
+common:observe --profile=bazel-profile.json.gz
+
+# 手元の kind の bb-portal にビルドのイベントを送る。
+# kubectl -n buildbarn port-forward svc/portal-bes 18082:8082 と svc/portal 18081:8081 でつないでから使う。
+common:portal --bes_backend=grpc://localhost:18082
+common:portal --bes_results_url=http://localhost:18081/bazel-invocations/
