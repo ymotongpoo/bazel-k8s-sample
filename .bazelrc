@@ -1,2 +1,6 @@
 # テストが失敗したときだけ、そのテストの出力を表示する。
 test --test_output=errors
+
+# ホストの C/C++ コンパイラを自動検出したツールチェーンを使わない。
+# Go は cgo なしでビルドされ、どのプラットフォーム向けでも静的にリンクされる。
+common --repo_env=BAZEL_DO_NOT_DETECT_CPP_TOOLCHAIN=1
