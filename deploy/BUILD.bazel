@@ -1,3 +1,7 @@
+load("@bazel_lib//lib:expand_template.bzl", "expand_template")
+load("@rules_oci//oci:defs.bzl", "oci_image", "oci_push")
+load("@rules_multirun//:defs.bzl", "multirun")
+load("@tar.bzl", "tar")
 load("//tools/build:kustomize.bzl", "kustomize_build", "kustomize_image_digests")
 
 # 2つのサービスのイメージのインデックスの digest を、images に書いた Component。
@@ -21,4 +25,56 @@ kustomize_build(
         "//services/worker:worker_index.digest",
     ],
     overlay = "overlays/dev",
+)
+
+# レンダリングしたマニフェストを、Flux の OCIRepository が展開できる tar+gzip のレイヤーにする。
+tar(
+    name = "dev_manifests_layer",
+    srcs = [":dev"],
+    compress = "gzip",
+    mtree = ["./manifests.yaml type=file uid=0 gid=0 mode=0644 time=1672560000 content=$(execpath :dev)"],
+)
+
+expand_template(
+    name = "dev_manifests_annotations",
+    out = "dev_manifests_annotations.txt",
+    stamp_substitutions = {"unstamped": "{{STABLE_GIT_COMMIT}}"},
+    template = ["org.opencontainers.image.revision=unstamped"],
+)
+
+# マニフェストだけを入れた OCI アーティファクト。コンテナとして実行するものではないが、
+# rules_oci はイメージの形でしか作れないので、OS と CPU には仮の値を入れる。
+oci_image(
+    name = "dev_manifests",
+    annotations = ":dev_manifests_annotations",
+    architecture = "amd64",
+    os = "linux",
+    tars = [":dev_manifests_layer"],
+)
+
+expand_template(
+    name = "dev_manifests_tags",
+    out = "dev_manifests_tags.txt",
+    stamp_substitutions = {"unstamped": "{{STABLE_GIT_COMMIT}}"},
+    template = [
+        "dev",
+        "unstamped",
+    ],
+)
+
+oci_push(
+    name = "dev_manifests_push",
+    image = ":dev_manifests",
+    remote_tags = ":dev_manifests_tags",
+    repository = "localhost:5001/bazel-k8s-sample/manifests",
+)
+
+# イメージを push してから、マニフェストを push する。bazel run --config=push //deploy:push_dev で使う。
+multirun(
+    name = "push_dev",
+    commands = [
+        "//services/api:api_push",
+        "//services/worker:worker_push",
+        ":dev_manifests_push",
+    ],
 )
