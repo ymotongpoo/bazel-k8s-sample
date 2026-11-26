@@ -1,0 +1,43 @@
+#!/usr/bin/env bash
+# 手元に kind のクラスタとレジストリを立て、Flux を入れる。
+# レジストリの設定は kind のドキュメントの「Local Registry」の手順に従う。
+set -euo pipefail
+
+cluster=bazel-k8s-sample
+reg_name=kind-registry
+reg_port=5001
+node_image='kindest/node:v1.37.0@sha256:a1ed56cfb0e7b93589bdf97c8cd566405a265939e3620fc4f5de89adff580ae5'
+registry_image='registry:3@sha256:82f6ff4a7f982960c8aa51617fea3aabc485df6e55cce80d22deb1de36f1bc3c'
+
+# 1. 手元のレジストリ。ホストからは localhost:5001 で push する。
+if [[ "$(docker inspect -f '{{.State.Running}}' "${reg_name}" 2>/dev/null || true)" != true ]]; then
+  docker run -d --restart=always -p "127.0.0.1:${reg_port}:5000" --network bridge --name "${reg_name}" "${registry_image}"
+fi
+
+# 2. クラスタ。containerd にレジストリの設定のディレクトリを読ませる。
+if ! kind get clusters | grep -qx "${cluster}"; then
+  kind create cluster --name "${cluster}" --image "${node_image}" --config - <<YAML
+kind: Cluster
+apiVersion: kind.x-k8s.io/v1alpha4
+containerdConfigPatches:
+  - |-
+    [plugins."io.containerd.grpc.v1.cri".registry]
+      config_path = "/etc/containerd/certs.d"
+YAML
+fi
+
+# 3. ノードの中の localhost:5001 は、ノード自身を指す。イメージの pull をレジストリのコンテナに向ける。
+for node in $(kind get nodes --name "${cluster}"); do
+  docker exec "${node}" mkdir -p "/etc/containerd/certs.d/localhost:${reg_port}"
+  printf '[host."http://%s:5000"]\n' "${reg_name}" |
+    docker exec -i "${node}" cp /dev/stdin "/etc/containerd/certs.d/localhost:${reg_port}/hosts.toml"
+done
+
+# 4. レジストリをクラスタのネットワークにつなぐ。Flux はクラスタの中から kind-registry:5000 で pull する。
+if [[ "$(docker inspect -f '{{json .NetworkSettings.Networks.kind}}' "${reg_name}")" == null ]]; then
+  docker network connect kind "${reg_name}"
+fi
+
+# 5. Flux のコントローラーを入れ、dev のマニフェストを取得して適用させる。
+flux install
+kubectl apply -f deploy/flux/dev.yaml

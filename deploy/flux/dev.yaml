@@ -1,0 +1,28 @@
+# Flux に、レジストリの dev のマニフェストを取得してクラスタに適用させる。
+# この2つのリソースはクラスタの側の設定なので、Bazel ではなく kubectl apply で一度だけ適用する。
+apiVersion: source.toolkit.fluxcd.io/v1
+kind: OCIRepository
+metadata:
+  name: shortener-dev
+  namespace: flux-system
+spec:
+  interval: 1m
+  url: oci://kind-registry:5000/bazel-k8s-sample/manifests
+  insecure: true
+  ref:
+    tag: dev
+---
+apiVersion: kustomize.toolkit.fluxcd.io/v1
+kind: Kustomization
+metadata:
+  name: shortener-dev
+  namespace: flux-system
+spec:
+  interval: 10m
+  sourceRef:
+    kind: OCIRepository
+    name: shortener-dev
+  path: ./
+  prune: true
+  wait: true
+  timeout: 2m
