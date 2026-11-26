@@ -10,7 +10,7 @@ spec:
   url: oci://kind-registry:5000/bazel-k8s-sample/manifests-prod
   insecure: true
   ref:
-    digest: sha256:8acf26f748c5d02ce47538982b68b3a918c700f4c47a39f23e274d08c8bfbe62
+    digest: sha256:37a63ea03819b24f6a34d894f478fce4df27cb457aa218e39a91bfa471d66ecb
 ---
 apiVersion: kustomize.toolkit.fluxcd.io/v1
 kind: Kustomization
