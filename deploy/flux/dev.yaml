@@ -1,4 +1,5 @@
 # Flux に、レジストリの dev のマニフェストを取得してクラスタに適用させる。
+# 手元のレジストリなので、10秒ごとに dev のタグを確かめさせる。
 # この2つのリソースはクラスタの側の設定なので、Bazel ではなく kubectl apply で一度だけ適用する。
 apiVersion: source.toolkit.fluxcd.io/v1
 kind: OCIRepository
@@ -6,7 +7,7 @@ metadata:
   name: shortener-dev
   namespace: flux-system
 spec:
-  interval: 1m
+  interval: 10s
   url: oci://kind-registry:5000/bazel-k8s-sample/manifests
   insecure: true
   ref:
