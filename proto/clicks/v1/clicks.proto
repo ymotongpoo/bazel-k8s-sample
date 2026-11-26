@@ -1,0 +1,17 @@
+syntax = "proto3";
+
+// clicks.v1 は短縮 URL へのアクセスの記録と集計を定義する。
+package clicks.v1;
+
+option go_package = "github.com/ymotongpoo/bazel-k8s-sample/proto/clicks/v1;clicksv1";
+
+// ClickEvent は短縮コードへのアクセスが1回あったことを表す。
+message ClickEvent {
+  string code = 1;
+}
+
+// ClickStats は短縮コードごとのアクセスの回数を返す。
+message ClickStats {
+  string code = 1;
+  int64 count = 2;
+}
