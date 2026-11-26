@@ -18,6 +18,9 @@ bazel_dep(name = "protobuf", version = "36.2")
 bazel_dep(name = "rules_shell", version = "0.10.0")
 bazel_dep(name = "tar.bzl", version = "0.10.9")
 
+# 開発のときだけ使うツール。このモジュールを依存にするほかのモジュールには伝わらない。
+bazel_dep(name = "buildifier_prebuilt", version = "10.2.0", dev_dependency = True)
+
 go_sdk = use_extension("@rules_go//go:extensions.bzl", "go_sdk")
 go_sdk.download(version = "1.27.4")
 go_sdk.nogo(nogo = "//:nogo")

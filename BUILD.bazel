@@ -1,3 +1,4 @@
+load("@buildifier_prebuilt//:rules.bzl", "buildifier")
 load("@gazelle//:def.bzl", "DEFAULT_LANGUAGES", "gazelle", "gazelle_binary")
 load("@npm//:defs.bzl", "npm_link_all_packages")
 load("@rules_go//go:def.bzl", "TOOLS_NOGO", "nogo")
@@ -20,3 +21,18 @@ nogo(
 )
 
 npm_link_all_packages(name = "node_modules")
+
+# BUILD ファイルと .bzl の書式と lint の警告を確かめる。CI では check を、手元では fix を使う。
+buildifier(
+    name = "buildifier.check",
+    exclude_patterns = ["./.git/*"],
+    lint_mode = "warn",
+    mode = "diff",
+)
+
+buildifier(
+    name = "buildifier.fix",
+    exclude_patterns = ["./.git/*"],
+    lint_mode = "fix",
+    mode = "fix",
+)
