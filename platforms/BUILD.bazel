@@ -16,3 +16,18 @@ platform(
     ],
     visibility = ["//visibility:public"],
 )
+
+# Buildbarn のワーカー（infra/buildbarn）で実行するときの実行のプラットフォーム。
+# exec_properties は、ワーカーが申告する要件と一致させる。
+platform(
+    name = "remote_linux_amd64",
+    constraint_values = [
+        "@platforms//os:linux",
+        "@platforms//cpu:x86_64",
+    ],
+    exec_properties = {
+        "OSFamily": "linux",
+        "container-image": "docker://ghcr.io/catthehacker/ubuntu:act-22.04@sha256:dd7654ffb01d5b7b54b23b9ce928a1f7f2d08c7b3d7e320b6574b55d7ccde78b",
+    },
+    visibility = ["//visibility:public"],
+)

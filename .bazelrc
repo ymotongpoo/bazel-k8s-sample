@@ -16,3 +16,9 @@ run:push --stamp
 
 # 手元の kind の bazel-remote をリモートキャッシュに使う。bazel build --config=cache で使う。
 common:cache --remote_cache=grpc://localhost:9092
+
+# 手元の kind の Buildbarn でリモート実行する。bazel build --config=remote で使う。
+common:remote --remote_executor=grpc://localhost:8980
+common:remote --extra_execution_platforms=//platforms:remote_linux_amd64
+# 同時に実行するアクションの数は、手元の CPU の数ではなくワーカーの数で決める。
+common:remote --jobs=16
